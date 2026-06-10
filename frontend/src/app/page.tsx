@@ -581,52 +581,52 @@ export default function Home() {
         {/* Floating active tour route indicator bar (if tour is active) */}
         {activeTourStops.length > 0 && (
           <div className="absolute bottom-6 left-6 right-6 md:left-[446px] z-30 animate-fade-in-up">
-            <div className="p-4 rounded-xl bg-white/95 backdrop-blur-md border border-amber-400 flex items-center justify-between shadow-2xl animate-bounce-short">
+            <div className="p-4 rounded-xl bg-white/95 backdrop-blur-md border border-amber-400 flex flex-col md:flex-row md:items-center justify-between gap-3.5 shadow-2xl animate-bounce-short">
               <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500 text-black font-black">
-                {activeTourStops.length}
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500 text-black font-black shrink-0">
+                  {activeTourStops.length}
+                </div>
+                <div>
+                  <span className="block text-xs font-black text-zinc-900 leading-tight">
+                    {t("tour.activeTour")}
+                  </span>
+                  <span className="text-[10px] text-amber-700 font-bold tracking-wide leading-tight block mt-0.5">
+                    {t("tour.routeOptimization")}
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="block text-xs font-black text-zinc-900">
-                  {t("tour.activeTour")}
-                </span>
-                <span className="text-[10px] text-amber-700 font-bold tracking-wide">
-                  {t("tour.routeOptimization")}
-                </span>
+
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <a
+                  href={getGoogleMapsDirUrl(activeTourStops, places)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200 text-xs font-bold transition-all duration-200 active:scale-95 hover:scale-105 hover:shadow-sm group text-center"
+                >
+                  <Navigation className="w-3.5 h-3.5 text-amber-600 shrink-0 transition-transform duration-350 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  <span>{t("tour.openMaps")}</span>
+                </a>
+
+                <button
+                  onClick={handleShareTour}
+                  className={`flex-1 md:flex-none px-3 py-1.5 rounded-lg border text-xs font-bold transition-all duration-200 active:scale-95 hover:scale-105 hover:shadow-md text-center ${
+                    shareStatus === "copied"
+                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-650"
+                      : "bg-amber-500 text-black hover:bg-amber-600 border-amber-400 shadow-sm"
+                  }`}
+                >
+                  {shareStatus === "copied" ? t("generator.copied") : t("tour.shareLink")}
+                </button>
+                
+                <button
+                  onClick={handleClearTour}
+                  className="hidden sm:block text-[11px] text-zinc-550 hover:text-red-650 transition-all duration-200 active:scale-95 hover:scale-105 font-bold"
+                >
+                  {t("generator.discard")}
+                </button>
               </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <a
-                href={getGoogleMapsDirUrl(activeTourStops, places)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200 text-xs font-bold transition-all duration-200 active:scale-95 hover:scale-105 hover:shadow-sm group"
-              >
-                <Navigation className="w-3.5 h-3.5 text-amber-600 shrink-0 transition-transform duration-350 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                <span>{t("tour.openMaps")}</span>
-              </a>
-
-              <button
-                onClick={handleShareTour}
-                className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all duration-200 active:scale-95 hover:scale-105 hover:shadow-md ${
-                  shareStatus === "copied"
-                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-650"
-                    : "bg-amber-500 text-black hover:bg-amber-600 border-amber-400 shadow-sm"
-                }`}
-              >
-                {shareStatus === "copied" ? t("generator.copied") : t("tour.shareLink")}
-              </button>
-              
-              <button
-                onClick={handleClearTour}
-                className="hidden sm:block text-[11px] text-zinc-550 hover:text-red-650 transition-all duration-200 active:scale-95 hover:scale-105 font-bold"
-              >
-                {t("generator.discard")}
-              </button>
             </div>
           </div>
-        </div>
       )}
 
         {/* Detailed drawer overlay */}
