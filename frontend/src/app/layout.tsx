@@ -4,6 +4,7 @@ import "./globals.css";
 import { execSync } from "child_process";
 import path from "path";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { PlacesProvider } from "@/context/PlacesContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Đi đâu làm gì? - Go somewhere, do something",
+  title: "Đi Đâu Ăn Gì? - Food Tour Map",
   description: "Vietnamese Food Tour Planner & Experience Mapper",
 };
 
@@ -40,7 +41,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider>
+          <PlacesProvider>{children}</PlacesProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

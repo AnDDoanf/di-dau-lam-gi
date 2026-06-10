@@ -6,7 +6,8 @@
     "dev": "node scripts/parse-places.js && next dev",
     "build": "node scripts/parse-places.js && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "export-excel": "node scripts/export-to-excel.js"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
@@ -15,7 +16,8 @@
     "next": "16.2.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
