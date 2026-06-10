@@ -18,6 +18,7 @@ interface LeafletMapProps {
   onToggleVisited: (placeId: string) => void;
   center: [number, number];
   zoom: number;
+  searchQuery?: string;
 }
 
 // Map controller to handle bounds changes dynamically
@@ -44,6 +45,7 @@ export default function LeafletMap({
   onToggleVisited,
   center,
   zoom,
+  searchQuery,
 }: LeafletMapProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -83,17 +85,36 @@ export default function LeafletMap({
   }
 
   // Create custom marker icons
-  const createMarkerIcon = (place: Place, tourOrderIndex: number) => {
+  const createMarkerIcon = (
+    place: Place,
+    tourOrderIndex: number,
+    isMatch: boolean,
+    hasActiveSearch: boolean
+  ) => {
     const isVisited = visitedIds.includes(place.id);
     const cat = CATEGORIES[place.category];
     const catColor = cat ? cat.markerColor : "#ffffff";
 
+    let opacityClass = "";
+    let highlightClass = "";
+    let pingHtml = "";
+
+    if (hasActiveSearch) {
+      if (isMatch) {
+        highlightClass = "border-amber-500 scale-125 z-[1000] ring-4 ring-amber-500/20";
+        pingHtml = `<div class="absolute inset-0 rounded-full bg-amber-500 animate-ping opacity-60"></div>`;
+      } else {
+        opacityClass = "opacity-30 grayscale scale-90";
+      }
+    }
+
     if (isVisited) {
       return L.divIcon({
-        className: "custom-visited-marker",
+        className: `custom-visited-marker ${opacityClass} ${highlightClass}`,
         html: `
-          <div class="relative flex items-center justify-center w-8 h-8 rounded-full border-2 border-zinc-700 bg-zinc-800 text-zinc-400 shadow-lg transition duration-300 transform hover:scale-110">
+          <div class="relative flex items-center justify-center w-8 h-8 rounded-full border-2 border-zinc-700 bg-zinc-800 text-zinc-400 shadow-lg transition duration-300 transform">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
+            ${pingHtml}
           </div>
         `,
         iconSize: [32, 32],
@@ -104,12 +125,13 @@ export default function LeafletMap({
     if (tourOrderIndex !== -1) {
       // In tour list, render with the active number order
       return L.divIcon({
-        className: "custom-tour-marker",
+        className: `custom-tour-marker ${opacityClass} ${highlightClass}`,
         html: `
-          <div class="relative flex items-center justify-center w-9 h-9 rounded-full border-2 border-amber-400 bg-amber-500 text-black font-extrabold shadow-xl transition duration-300 transform hover:scale-110">
+          <div class="relative flex items-center justify-center w-9 h-9 rounded-full border-2 border-amber-400 bg-amber-500 text-black font-extrabold shadow-xl transition duration-300 transform">
             <span class="text-sm">${tourOrderIndex + 1}</span>
             <div class="absolute -bottom-1 w-2 h-2 bg-amber-500 rotate-45 border-r border-b border-amber-400"></div>
             <div class="absolute inset-0 rounded-full bg-amber-500 animate-ping opacity-25 -z-10"></div>
+            ${pingHtml}
           </div>
         `,
         iconSize: [36, 36],
@@ -119,17 +141,21 @@ export default function LeafletMap({
 
     // Standard unvisited place
     return L.divIcon({
-      className: "custom-place-marker",
+      className: `custom-place-marker ${opacityClass} ${highlightClass}`,
       html: `
-        <div class="group relative flex items-center justify-center w-7 h-7 rounded-full border-2 bg-white shadow-md transition duration-300 transform hover:scale-110" style="border-color: ${catColor}">
+        <div class="group relative flex items-center justify-center w-7 h-7 rounded-full border-2 bg-white shadow-md transition duration-300 transform" style="border-color: ${catColor}">
           <div class="w-2.5 h-2.5 rounded-full" style="background-color: ${catColor}"></div>
           <div class="absolute -bottom-1 w-1.5 h-1.5 bg-white rotate-45" style="border-right: 2px solid ${catColor}; border-bottom: 2px solid ${catColor}"></div>
+          ${pingHtml}
         </div>
       `,
       iconSize: [28, 28],
       iconAnchor: [14, 28],
     });
   };
+
+  const query = searchQuery?.toLowerCase().trim() || "";
+  const hasActiveSearch = query !== "";
 
   return (
     <div className="w-full h-full relative">
@@ -166,11 +192,17 @@ export default function LeafletMap({
           const isVisited = visitedIds.includes(place.id);
           const cat = CATEGORIES[place.category];
 
+          const isMatch =
+            !hasActiveSearch ||
+            place.name.toLowerCase().includes(query) ||
+            place.tags.some((t) => t.toLowerCase().includes(query)) ||
+            !!(place.description && place.description.toLowerCase().includes(query));
+
           return (
             <Marker
               key={place.id}
               position={[place.latitude, place.longitude]}
-              icon={createMarkerIcon(place, tourOrderIndex)}
+              icon={createMarkerIcon(place, tourOrderIndex, isMatch, hasActiveSearch)}
             >
               <Popup className="custom-leaflet-popup">
                 <div className="p-3 bg-white text-zinc-900 rounded-lg max-w-[240px] border border-zinc-200 shadow-xl">

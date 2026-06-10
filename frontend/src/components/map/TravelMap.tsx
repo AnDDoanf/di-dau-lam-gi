@@ -26,6 +26,7 @@ interface TravelMapProps {
   onToggleVisited: (placeId: string) => void;
   center: [number, number];
   zoom: number;
+  searchQuery?: string;
 }
 
 export default function TravelMap({
@@ -37,6 +38,7 @@ export default function TravelMap({
   onToggleVisited,
   center,
   zoom,
+  searchQuery,
 }: TravelMapProps) {
   return (
     <div className="w-full h-full relative overflow-hidden rounded-2xl border border-zinc-200 shadow-xl bg-zinc-50">
@@ -54,6 +56,7 @@ export default function TravelMap({
         onToggleVisited={onToggleVisited}
         center={center}
         zoom={zoom}
+        searchQuery={searchQuery}
       />
     </div>
   );
