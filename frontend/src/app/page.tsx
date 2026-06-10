@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PLACES } from "@/data/places";
+import { usePlaces } from "@/context/PlacesContext";
 import { CITIES } from "@/data/cities";
 import { Place, PlaceCategory } from "@/types/place";
 import { TourStop } from "@/types/tour";
@@ -14,12 +14,24 @@ import FilterPanel from "@/components/sidebar/FilterPanel";
 import TourGenerator from "@/components/sidebar/TourGenerator";
 import PlaceCard from "@/components/places/PlaceCard";
 import PlaceDetail from "@/components/places/PlaceDetail";
-import { MapPin, Navigation, Compass, Layers, Menu, X, ArrowRight, Star } from "lucide-react";
+import { MapPin, Navigation, Compass, Menu, X, Database, Cloud, RefreshCw, HelpCircle } from "lucide-react";
 import confetti from "canvas-confetti";
 import { useLanguage } from "@/context/LanguageContext";
+import logoImg from "./icon.png";
 
 export default function Home() {
   const { t, language, setLanguage } = useLanguage();
+  // Load dynamic places context
+  const {
+    places,
+    isLoading,
+    error,
+    googleDriveId,
+    setGoogleDriveId,
+    isUsingLocal,
+    refreshPlaces,
+  } = usePlaces();
+
   // 1. Core State
   const [selectedCityId, setSelectedCityId] = useState("hanoi");
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,15 +45,53 @@ export default function Home() {
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
   const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
 
+  // Local state for sync settings
+  const [isDriveSettingsOpen, setIsDriveSettingsOpen] = useState(false);
+  const [driveInputValue, setDriveInputValue] = useState("");
+
+  // Sync state for input value when drive ID loads
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      setDriveInputValue(googleDriveId || "");
+    });
+  }, [googleDriveId]);
+
+  const handleSave = async () => {
+    setGoogleDriveId(driveInputValue);
+    setIsDriveSettingsOpen(false);
+    setTimeout(() => {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ["#f59e0b", "#10b981"],
+      });
+    }, 800);
+  };
+
+  const handleClear = () => {
+    setGoogleDriveId("");
+    setDriveInputValue("");
+    setIsDriveSettingsOpen(false);
+  };
+
+  const handleRefresh = async () => {
+    await refreshPlaces();
+    confetti({
+      particleCount: 50,
+      spread: 50,
+      colors: ["#10b981", "#3b82f6"],
+    });
+  };
+
   // Load custom hooks
   const {
     visitedIds,
-    isInitialized: isVisitedInitialized,
     toggleVisited,
     isVisited,
   } = useVisitedPlaces();
 
-  const { generateTourByCount, generateTourByDays } = useTourGenerator(PLACES, visitedIds);
+  const { generateTourByCount, generateTourByDays } = useTourGenerator(places, visitedIds);
 
   // Get current city details
   const activeCity = useMemo(() => {
@@ -54,8 +104,10 @@ export default function Home() {
 
   // Update map position when active city changes
   useEffect(() => {
-    setMapCenter([activeCity.latitude, activeCity.longitude]);
-    setMapZoom(activeCity.zoom);
+    Promise.resolve().then(() => {
+      setMapCenter([activeCity.latitude, activeCity.longitude]);
+      setMapZoom(activeCity.zoom);
+    });
   }, [activeCity]);
 
   // Reset tour when changing cities to keep it geographically consistent
@@ -66,7 +118,7 @@ export default function Home() {
 
   // Filtered places selector
   const filteredPlaces = useMemo(() => {
-    return PLACES.filter((place) => {
+    return places.filter((place) => {
       // Filter by city
       if (place.city !== selectedCityId) return false;
 
@@ -94,7 +146,7 @@ export default function Home() {
 
       return true;
     });
-  }, [selectedCityId, searchQuery, selectedCategories, visitedFilter, priceFilter, visitedIds]);
+  }, [selectedCityId, searchQuery, selectedCategories, visitedFilter, priceFilter, visitedIds, places]);
 
   // Handlers
   const handlePlaceSelect = (place: Place) => {
@@ -190,8 +242,9 @@ export default function Home() {
         {/* Brand Header */}
         <div className="p-6 border-b border-zinc-200 bg-white/95 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-amber-500 text-black shadow-lg shadow-amber-500/20 font-black">
-              đđ
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-amber-500 text-black shadow-lg shadow-amber-500/20 font-black overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoImg.src} alt="logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-lg font-black tracking-tight bg-gradient-to-r from-zinc-900 via-zinc-750 to-zinc-600 bg-clip-text text-transparent">
@@ -203,29 +256,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Language Switcher */}
-          <div className="flex items-center gap-1 bg-zinc-100 p-0.5 rounded-lg border border-zinc-200">
-            <button
-              onClick={() => setLanguage("vi")}
-              className={`px-2 py-0.5 text-[10px] font-extrabold rounded-md transition-all duration-200 ${
-                language === "vi"
-                  ? "bg-white text-zinc-900 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-800"
-              }`}
-            >
-              VI
-            </button>
-            <button
-              onClick={() => setLanguage("en")}
-              className={`px-2 py-0.5 text-[10px] font-extrabold rounded-md transition-all duration-200 ${
-                language === "en"
-                  ? "bg-white text-zinc-900 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-800"
-              }`}
-            >
-              EN
-            </button>
-          </div>
+
         </div>
 
         <div className="p-5 flex flex-col gap-5">
@@ -330,17 +361,38 @@ export default function Home() {
       {/* 2. MAIN MAP PAGE */}
       <main className="flex-1 flex flex-col h-full relative">
         {/* Floating Mobile Top bar */}
-        <header className="flex md:hidden items-center justify-between p-4 bg-white border-b border-zinc-250 z-30">
+        <header className="flex md:hidden items-center justify-between p-4 bg-white border-b border-zinc-250 z-50">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-500 text-black font-extrabold text-sm shrink-0">
-              đ
+            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-500 text-black font-extrabold text-sm shrink-0 overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoImg.src} alt="logo" className="w-full h-full object-cover" />
             </div>
-            <span className="font-extrabold text-sm text-zinc-900 truncate max-w-[120px] sm:max-w-none">
+            <span className="font-extrabold text-xs sm:text-sm text-zinc-900 leading-tight whitespace-normal line-clamp-2 max-w-[110px] sm:max-w-none">
               {t("brand.title")}
             </span>
           </div>
  
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Google Drive sync button for mobile */}
+            <button
+              onClick={() => setIsDriveSettingsOpen(true)}
+              className={`p-1.5 rounded-lg border transition-all duration-200 active:scale-95 flex items-center justify-center relative ${
+                isUsingLocal
+                  ? "bg-zinc-100 border-zinc-250 text-zinc-500"
+                  : error
+                  ? "bg-red-50 border-red-200 text-red-500"
+                  : "bg-emerald-50 border-emerald-250 text-emerald-600"
+              }`}
+            >
+              {isLoading ? (
+                <span className="w-3.5 h-3.5 border border-amber-500 border-t-transparent rounded-full animate-spin" />
+              ) : isUsingLocal ? (
+                <Database className="w-3.5 h-3.5" />
+              ) : (
+                <Cloud className="w-3.5 h-3.5" />
+              )}
+            </button>
+
             {/* Quick language toggle */}
             <button
               onClick={() => setLanguage(language === "vi" ? "en" : "vi")}
@@ -374,7 +426,7 @@ export default function Home() {
         {/* Map Container - taking remaining viewport */}
         <div className="flex-1 w-full h-full relative z-10">
           <TravelMap
-            places={PLACES}
+            places={places}
             tourStops={activeTourStops}
             visitedIds={visitedIds}
             onPlaceClick={handlePlaceSelect}
@@ -382,13 +434,93 @@ export default function Home() {
             onToggleVisited={handleToggleVisited}
             center={mapCenter}
             zoom={mapZoom}
+            searchQuery={searchQuery}
           />
+
+          {/* Floating Search Input on Map (Desktop only) */}
+          <div className="hidden md:block absolute top-6 left-6 w-96 max-w-full" style={{ zIndex: 1000 }}>
+            <div className="bg-white/95 backdrop-blur-md border border-zinc-200 rounded-2xl shadow-xl flex items-center p-1.5 focus-within:ring-2 focus-within:ring-amber-500/10 focus-within:border-amber-500 transition-all duration-200">
+              <Compass className="w-5 h-5 text-amber-500 shrink-0 ml-3.5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t("sidebar.searchPlaceholder")}
+                className="flex-1 bg-transparent border-0 outline-none text-xs text-zinc-800 placeholder-zinc-400 py-2 px-3 font-semibold"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="p-1.5 text-zinc-400 hover:text-zinc-650 rounded-xl transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Floating Controls (Drive Sync & Language Switcher) - Top Right (Desktop only) */}
+          <div className="hidden md:flex absolute top-6 right-6 items-center gap-3" style={{ zIndex: 1000 }}>
+            {/* Google Drive Sync Indicator / Button */}
+            <button
+              onClick={() => setIsDriveSettingsOpen(true)}
+              className={`p-3 rounded-2xl border bg-white/95 backdrop-blur-md shadow-lg transition-all duration-200 active:scale-95 hover:scale-105 flex items-center justify-center relative ${
+                isUsingLocal
+                  ? "border-zinc-200 text-zinc-500 hover:bg-white hover:text-zinc-700"
+                  : error
+                  ? "border-red-200 text-red-500 hover:bg-red-50/90"
+                  : "border-emerald-250 text-emerald-600 hover:bg-emerald-50/90"
+              }`}
+              title={t("driveSync.buttonTooltip")}
+            >
+              {isLoading ? (
+                <span className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+              ) : isUsingLocal ? (
+                <Database className="w-5 h-5" />
+              ) : (
+                <Cloud className="w-5 h-5" />
+              )}
+              {/* Status dot */}
+              <span className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border border-white ${
+                isUsingLocal ? "bg-zinc-400" : error ? "bg-red-500" : "bg-emerald-500"
+              }`} />
+            </button>
+
+            {/* Language Switcher - Bigger & Styled */}
+            <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md p-1 border border-zinc-200 rounded-2xl shadow-lg">
+              <button
+                onClick={() => setLanguage("vi")}
+                className={`px-4 py-2 text-xs font-black rounded-xl transition-all duration-200 active:scale-95 ${
+                  language === "vi"
+                    ? "bg-amber-500 text-black shadow-md shadow-amber-500/10"
+                    : "text-zinc-500 hover:text-zinc-800"
+                }`}
+              >
+                VI
+              </button>
+              <button
+                onClick={() => setLanguage("en")}
+                className={`px-4 py-2 text-xs font-black rounded-xl transition-all duration-200 active:scale-95 ${
+                  language === "en"
+                    ? "bg-amber-500 text-black shadow-md shadow-amber-500/10"
+                    : "text-zinc-500 hover:text-zinc-800"
+                }`}
+              >
+                EN
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Mobile Slide-over Drawer containing Search / Filters / Locations list */}
-        {isSidebarOpenMobile && (
-          <div className="md:hidden fixed inset-0 z-40 flex flex-col bg-white/95 backdrop-blur-md pt-16 overflow-y-auto">
-            <div className="p-4 flex flex-col gap-5">
+        <div
+          className={`md:hidden fixed inset-0 z-40 flex flex-col bg-white/95 backdrop-blur-md pt-16 overflow-y-auto transition-all duration-300 ease-out ${
+            isSidebarOpenMobile
+              ? "opacity-100 translate-y-0 pointer-events-auto"
+              : "opacity-0 translate-y-8 pointer-events-none"
+          }`}
+        >
+          <div className="p-4 flex flex-col gap-5">
               {/* AI generator */}
               <TourGenerator
                 onGenerateByCount={handleGenerateByCount}
@@ -445,12 +577,12 @@ export default function Home() {
               </div>
             </div>
           </div>
-        )}
 
         {/* Floating active tour route indicator bar (if tour is active) */}
         {activeTourStops.length > 0 && (
-          <div className="absolute bottom-6 left-6 right-6 md:left-[446px] z-30 p-4 rounded-xl bg-white/95 backdrop-blur-md border border-amber-400 flex items-center justify-between shadow-2xl animate-bounce-short">
-            <div className="flex items-center gap-3">
+          <div className="absolute bottom-6 left-6 right-6 md:left-[446px] z-30 animate-fade-in-up">
+            <div className="p-4 rounded-xl bg-white/95 backdrop-blur-md border border-amber-400 flex items-center justify-between shadow-2xl animate-bounce-short">
+              <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500 text-black font-black">
                 {activeTourStops.length}
               </div>
@@ -466,7 +598,7 @@ export default function Home() {
 
             <div className="flex items-center gap-2">
               <a
-                href={getGoogleMapsDirUrl(activeTourStops, PLACES)}
+                href={getGoogleMapsDirUrl(activeTourStops, places)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200 text-xs font-bold transition-all duration-200 active:scale-95 hover:scale-105 hover:shadow-sm group"
@@ -494,7 +626,8 @@ export default function Home() {
               </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
         {/* Detailed drawer overlay */}
         <PlaceDetail
@@ -511,6 +644,119 @@ export default function Home() {
           onToggleTour={() => selectedPlace && handleToggleTourStop(selectedPlace.id)}
         />
       </main>
+
+      {/* 3. Google Drive Sync Settings Modal */}
+      {isDriveSettingsOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in transition-opacity duration-300">
+          {/* Click outside to close */}
+          <div className="absolute inset-0" onClick={() => setIsDriveSettingsOpen(false)} />
+          
+          <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full max-w-md p-6 m-4 animate-scale-in relative z-10">
+            <div className="flex items-center justify-between mb-4 border-b border-zinc-150 pb-3">
+              <div className="flex items-center gap-2">
+                <Cloud className="w-5 h-5 text-amber-500" />
+                <h3 className="text-base font-black text-zinc-900">{t("driveSync.title")}</h3>
+              </div>
+              <button
+                onClick={() => setIsDriveSettingsOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-650 transition-colors duration-150"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Sync status section */}
+            <div className="mb-4 p-3.5 rounded-xl border border-zinc-150 bg-zinc-50 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between text-xs font-bold text-zinc-700">
+                <span>{t("driveSync.statusLabel")}</span>
+                <span className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${
+                    isLoading ? "bg-amber-500 animate-pulse" : isUsingLocal ? "bg-zinc-400" : error ? "bg-red-500" : "bg-emerald-500"
+                  }`} />
+                  <span className={
+                    isLoading ? "text-amber-500 animate-pulse" : isUsingLocal ? "text-zinc-500" : error ? "text-red-500" : "text-emerald-600"
+                  }>
+                    {isLoading ? t("driveSync.syncing") : isUsingLocal ? t("driveSync.statusLocal") : error ? t("driveSync.statusError") : t("driveSync.statusSynced")}
+                  </span>
+                </span>
+              </div>
+              
+              {!isUsingLocal && !error && !isLoading && (
+                <div className="text-[10px] text-zinc-500 font-bold mt-1">
+                  {t("driveSync.lastUpdated", { count: places.length })}
+                </div>
+              )}
+
+              {error && (
+                <div className="text-[10px] text-red-500 font-bold bg-red-50 p-2.5 rounded-lg border border-red-100 mt-1 leading-relaxed">
+                  {error}
+                </div>
+              )}
+            </div>
+
+            {/* Input field */}
+            <div className="mb-4">
+              <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1.5 tracking-wider">
+                Google Sheets Link / File ID
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={driveInputValue}
+                  onChange={(e) => setDriveInputValue(e.target.value)}
+                  placeholder={t("driveSync.placeholder")}
+                  disabled={isLoading}
+                  className="flex-1 px-3.5 py-2.5 border border-zinc-250 rounded-xl text-xs bg-zinc-50 text-zinc-800 outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/10 transition-all duration-200"
+                />
+                {!isUsingLocal && (
+                  <button
+                    onClick={handleRefresh}
+                    disabled={isLoading}
+                    className="px-3.5 py-2.5 bg-zinc-100 border border-zinc-200 text-zinc-700 rounded-xl hover:bg-zinc-200 transition disabled:opacity-50 flex items-center justify-center active:scale-95"
+                    title="Re-sync now"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Help / Instructions section */}
+            <div className="mb-6 bg-amber-500/5 border border-amber-500/10 rounded-xl p-3.5 flex gap-2.5">
+              <HelpCircle className="w-4.5 h-4.5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="text-[10px] text-zinc-600 leading-relaxed font-medium">
+                {t("driveSync.helpText")}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2 justify-end border-t border-zinc-150 pt-4">
+              {!isUsingLocal && (
+                <button
+                  onClick={handleClear}
+                  disabled={isLoading}
+                  className="px-4 py-2 border border-zinc-200 text-zinc-655 rounded-xl hover:bg-red-50 hover:text-red-650 hover:border-red-150 transition-all duration-150 text-xs font-bold mr-auto active:scale-95"
+                >
+                  {t("driveSync.clearBtn")}
+                </button>
+              )}
+              <button
+                onClick={() => setIsDriveSettingsOpen(false)}
+                className="px-4 py-2 border border-zinc-200 text-zinc-700 rounded-xl hover:bg-zinc-100 transition-all duration-150 text-xs font-bold active:scale-95"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isLoading || !driveInputValue.trim()}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 border border-amber-400 text-black rounded-xl transition-all duration-150 text-xs font-bold flex items-center gap-1.5 disabled:opacity-50 active:scale-95 hover:shadow-md hover:shadow-amber-500/10"
+              >
+                {t("driveSync.saveBtn")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

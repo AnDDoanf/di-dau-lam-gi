@@ -21,9 +21,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem("didau.lang") as Language;
     if (saved === "vi" || saved === "en") {
       setLanguageState(saved);
-    } else {
-      // Default to Vietnamese
-      setLanguageState("vi");
     }
   }, []);
 
@@ -37,10 +34,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     
     // Resolve nested keys e.g. "sidebar.exploreCity"
     const parts = key.split(".");
-    let current: any = dict;
+    let current: unknown = dict;
     for (const part of parts) {
       if (current && typeof current === "object" && part in current) {
-        current = current[part];
+        current = (current as Record<string, unknown>)[part];
       } else {
         return key;
       }
