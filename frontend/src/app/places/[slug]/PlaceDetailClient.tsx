@@ -2,7 +2,7 @@
 
 import React, { use, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { PLACES } from "@/data/places";
+import { usePlaces } from "@/context/PlacesContext";
 import { CATEGORIES } from "@/data/categories";
 import { useVisitedPlaces } from "@/hooks/useVisitedPlaces";
 import TravelMap from "@/components/map/TravelMap";
@@ -17,6 +17,7 @@ interface PlacePageProps {
 
 export default function PlaceDetailClient({ params }: PlacePageProps) {
   const { t } = useLanguage();
+  const { places } = usePlaces();
   // Unwrap Next.js dynamic route params
   const { slug } = use(params);
   const router = useRouter();
@@ -25,8 +26,8 @@ export default function PlaceDetailClient({ params }: PlacePageProps) {
 
   // Fetch target place
   const place = useMemo(() => {
-    return PLACES.find((p) => p.slug === slug);
-  }, [slug]);
+    return places.find((p) => p.slug === slug);
+  }, [slug, places]);
 
   if (!place) {
     return (

@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { PLACES } from "@/data/places";
+import { usePlaces } from "@/context/PlacesContext";
 import { Place, PlaceCategory } from "@/types/place";
 import { TourStop } from "@/types/tour";
 import { parseTourFromUrl, generateTourUrlParams } from "@/lib/url-parser";
@@ -10,24 +10,24 @@ import { useVisitedPlaces } from "@/hooks/useVisitedPlaces";
 import { CATEGORIES } from "@/data/categories";
 import { getGoogleMapsDirUrl } from "@/lib/map-utils";
 import TravelMap from "@/components/map/TravelMap";
-import PlaceCard from "@/components/places/PlaceCard";
 import PlaceDetail from "@/components/places/PlaceDetail";
-import { ArrowLeft, Share2, Compass, CheckCircle2, ChevronRight, MapPin, AlertTriangle, Sparkles, Navigation } from "lucide-react";
+import { ArrowLeft, Share2, Compass, CheckCircle2, ChevronRight, AlertTriangle, Sparkles, Navigation } from "lucide-react";
 import confetti from "canvas-confetti";
 import { useLanguage } from "@/context/LanguageContext";
 
 function SharedTourContent() {
   const { t, language, setLanguage } = useLanguage();
+  const { places } = usePlaces();
   const searchParams = useSearchParams();
   const router = useRouter();
 
   // 1. Visited places system (localStorage sync)
-  const { visitedIds, toggleVisited, isVisited } = useVisitedPlaces();
+  const { visitedIds, toggleVisited } = useVisitedPlaces();
 
   // 2. Parse initial tour from URL params
   const initialTour = useMemo(() => {
-    return parseTourFromUrl(searchParams, PLACES);
-  }, [searchParams]);
+    return parseTourFromUrl(searchParams, places);
+  }, [searchParams, places]);
 
   // Keep a local copy of tour stops so user can add/remove or manipulate
   const [tourStops, setTourStops] = useState<TourStop[]>([]);
@@ -51,7 +51,7 @@ function SharedTourContent() {
     return tourStops
       .map((stop) => {
         if (stop.type === "place") {
-          return PLACES.find((p) => p.id === stop.placeId);
+          return places.find((p) => p.id === stop.placeId);
         }
         // Map custom pins to temporary Place items for consistent listing
         return {
@@ -67,7 +67,7 @@ function SharedTourContent() {
         } as Place;
       })
       .filter((p): p is Place => !!p);
-  }, [tourStops]);
+  }, [tourStops, places]);
 
   // Calculate active coordinates to center map
   const mapCenter = useMemo((): [number, number] => {
@@ -215,7 +215,7 @@ function SharedTourContent() {
 
           <div className="mt-3.5">
             <a
-              href={getGoogleMapsDirUrl(tourStops, PLACES)}
+              href={getGoogleMapsDirUrl(tourStops, places)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200 text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:shadow-md group"
@@ -301,7 +301,7 @@ function SharedTourContent() {
       {/* Map Column */}
       <main className="flex-1 h-1/2 md:h-full relative z-10">
         <TravelMap
-          places={PLACES}
+          places={places}
           tourStops={tourStops}
           visitedIds={visitedIds}
           onPlaceClick={(p) => {
